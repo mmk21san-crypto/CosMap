@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Callout, Marker } from 'react-native-maps';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Linking, Platform, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import EventMap from '@/components/event-map';
 import { ALL_EVENTS } from '@/constants/cosmap-data';
 import { useCosMap } from '@/context/cosmap-context';
 import { AdminEventRow, listEvents } from '@/services/events-admin';
@@ -38,9 +38,9 @@ export default function MapScreen() {
   const router = useRouter();
   const { appPhase } = useCosMap();
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<MapView | null>(null);
   const [dbRows, setDbRows] = useState<AdminEventRow[]>([]);
   const [userCoord, setUserCoord] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [focusToken, setFocusToken] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -97,53 +97,27 @@ export default function MapScreen() {
         </View>
 
         <View style={styles.mapCard}>
-          <MapView
-            ref={mapRef}
-            style={styles.map}
-            showsUserLocation
-            onUserLocationChange={(e) => {
-              const c = e.nativeEvent.coordinate;
-              if (!c) return;
-              setUserCoord({ latitude: c.latitude, longitude: c.longitude });
-            }}
-            initialRegion={{
-              latitude: 35.6812,
-              longitude: 139.7671,
-              latitudeDelta: 5.5,
-              longitudeDelta: 5.5,
-            }}>
-            {points.map((p) => (
-              <Marker key={p.id} coordinate={{ latitude: p.latitude, longitude: p.longitude }}>
-                <Callout onPress={() => router.push({ pathname: '/event/[id]', params: { id: String(p.id) } })}>
-                  <View style={styles.callout}>
-                    <Text style={styles.calloutTitle}>{p.name}</Text>
-                    <Text style={styles.calloutSub}>{p.venue}</Text>
-                  </View>
-                </Callout>
-              </Marker>
-            ))}
-          </MapView>
+          <EventMap
+            points={points}
+            onPressPoint={(id) => router.push({ pathname: '/event/[id]', params: { id: String(id) } })}
+            onUserCoordChange={setUserCoord}
+            focusToken={focusToken}
+          />
         </View>
 
         <View style={styles.actionRow}>
           <Pressable
             onPress={() => {
               if (!userCoord) {
-                Alert.alert('位置情報を許可してください', '設定で位置情報を許可すると現在地へ戻れます。', [
-                  { text: 'キャンセル', style: 'cancel' },
-                  { text: '設定を開く', onPress: () => Linking.openSettings() },
-                ]);
+                if (Platform.OS !== 'web') {
+                  Alert.alert('位置情報を許可してください', '設定で位置情報を許可すると現在地へ戻れます。', [
+                    { text: 'キャンセル', style: 'cancel' },
+                    { text: '設定を開く', onPress: () => Linking.openSettings() },
+                  ]);
+                }
                 return;
               }
-              mapRef.current?.animateToRegion(
-                {
-                  latitude: userCoord.latitude,
-                  longitude: userCoord.longitude,
-                  latitudeDelta: 0.03,
-                  longitudeDelta: 0.03,
-                },
-                300,
-              );
+              setFocusToken((v) => v + 1);
             }}
             style={styles.locateBtn}>
             <Text style={styles.locateText}>{userCoord ? '現在地へ' : '許可して現在地へ'}</Text>
@@ -174,10 +148,6 @@ const styles = StyleSheet.create({
     height: '72%',
     backgroundColor: C.white,
   },
-  map: { flex: 1 },
-  callout: { width: 180, paddingVertical: 2 },
-  calloutTitle: { color: C.ink, fontSize: 13, fontFamily: 'Nunito_800ExtraBold' },
-  calloutSub: { color: C.mid, fontSize: 11, fontFamily: 'Nunito_600SemiBold', marginTop: 2 },
   hintBar: {
     borderRadius: 12,
     backgroundColor: 'rgba(22,19,74,0.82)',
