@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "プロフィール画像を選択するために写真ライブラリを使用します。",
+        "NSLocationWhenInUseUsageDescription": "近くのイベント表示と現在地へ戻る機能のために位置情報を使用します。"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,6 +31,19 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "プロフィール画像を選択するために写真ライブラリを使用します。"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#2B5BFF"
+        }
+      ],
       [
         "expo-splash-screen",
         {
